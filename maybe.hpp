@@ -129,11 +129,11 @@ private:
   class maybe_container_non_trivial {
   public:
     maybe_container_non_trivial(T _val)
-      : data(std::move(_val)) {
+      : data(new T(_val)) {
     }
 
     maybe_container_non_trivial(T *_val)
-      : data(std::move(_val)) {
+      : data(_val) {
     }
 
     maybe_container_non_trivial()
