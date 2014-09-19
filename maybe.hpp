@@ -12,24 +12,24 @@
 #include <type_traits>
 #include <memory>
 
-template<typename T>
+template<typename T, bool use_trivial = std::is_fundamental<T>::value>
 class maybe {
 public:
-  static maybe<T> just(T _val) {
-    return maybe<T>(_val);
+  static maybe<T, use_trivial> just(T _val) {
+    return maybe<T, use_trivial>(_val);
   }
 
   template<typename... Targs>
-  static maybe<T> just_emplace(Targs... args) {
+  static maybe<T, use_trivial> just_emplace(Targs... args) {
     return new T(args...);
   }
 
-  static maybe<T> just(T *_val) {
-    return maybe<T>(_val);
+  static maybe<T, use_trivial> just(T *_val) {
+    return maybe<T, use_trivial>(_val);
   }
 
-  static maybe<T> nothing() {
-    return maybe<T>();
+  static maybe<T, use_trivial> nothing() {
+    return maybe<T, use_trivial>();
   }
 
   bool has_value() const {
@@ -59,20 +59,20 @@ public:
   maybe() {
   }
 
-  maybe(maybe<T> &other) {
+  maybe(maybe<T, use_trivial> &other) {
     container = other.container;
   }
 
-  maybe(maybe<T> &&other) {
+  maybe(maybe<T, use_trivial> &&other) {
     container = other.container;
   }
   
-  inline maybe<T> &operator = (maybe<T> &right) {
+  inline maybe<T, use_trivial> &operator = (maybe<T, use_trivial> &right) {
     container = right.container;
     return *this;
   }
 
-  inline maybe<T> &operator = (maybe<T> right) {
+  inline maybe<T, use_trivial> &operator = (maybe<T, use_trivial> right) {
     container = right.container;
     return *this;
   }
@@ -85,7 +85,7 @@ private:
     }
 
     maybe_container_trivial(T *_val)
-      : has_data(true), data(_val) {
+      : has_data(true), data(std::move(*_val)) {
     }
 
     maybe_container_trivial()
@@ -130,10 +130,11 @@ private:
   public:
     maybe_container_non_trivial(T _val)
       : data(new T(_val)) {
+      
     }
 
     maybe_container_non_trivial(T *_val)
-      : data(_val) {
+      : data(std::move(_val)) {
     }
 
     maybe_container_non_trivial()
@@ -171,21 +172,11 @@ private:
   };
 
   typedef typename std::conditional<
-    std::is_fundamental<T>::value,
+    use_trivial,
     maybe_container_trivial,
     maybe_container_non_trivial>::type maybe_container_t;
 
   maybe_container_t container;
 };
-
-
-template<typename T, typename... Targs>
-maybe<T> new_maybe(Targs... args) {
-  T *data = new T(args...);
-  if (data != nullptr)
-    return maybe<T>::just(data);
-  else
-    return maybe<T>::nothing();
-}
 
 #endif
